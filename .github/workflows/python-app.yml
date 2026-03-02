@@ -39,4 +39,4 @@ jobs:
 
       - name: Test with pytest
         run: |
-          PYTHONPATH=src pytest -q
+          PYTHONPATH=src pytest -v -s
