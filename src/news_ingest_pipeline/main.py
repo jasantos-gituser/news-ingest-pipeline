@@ -29,6 +29,7 @@ def main() -> None:
         for article in articles:
            print(article.model_dump())
 
+    # uncomment the following lines to enable Kinesis writing (make sure AWS credentials and permissions are set up correctly)
     # writer = KinesisWriter(config)
 
     # sent = 0
