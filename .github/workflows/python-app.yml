@@ -40,3 +40,15 @@ jobs:
       - name: Test with pytest
         run: |
           PYTHONPATH=src pytest -q
+          
+      - name: Build Docker test image
+        run: |
+          docker build --target test -t news-ingest-pipeline:test .
+    
+      - name: Run pytest inside Docker
+        run: |
+          docker run --rm news-ingest-pipeline:test
+    
+      - name: Build Docker runtime image
+        run: |
+          docker build --target runtime -t news-ingest-pipeline:runtime .
