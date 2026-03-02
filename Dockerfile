@@ -22,5 +22,14 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy project files
 COPY src ./src
 
+# Test stage (used by CI)
+FROM base AS test
+RUN pip install --no-cache-dir pytest
+COPY test ./test
+CMD ["pytest", "-q"]
+
+# Runtime stage (your actual app image)
+FROM base AS runtime
+
 # Default command
 CMD ["python", "-m", "news_ingest_pipeline.main"]
