@@ -33,4 +33,7 @@ CMD ["pytest", "-q"]
 FROM base AS runtime
 
 # Default command
-CMD ["python", "-m", "news_ingest_pipeline.main"]
+CMD ["uvicorn", "news_ingest_pipeline.api:app", "--host", "0.0.0.0", "--port", "8000"]
+
+# Default command
+# CMD ["python", "-m", "news_ingest_pipeline.main"]
