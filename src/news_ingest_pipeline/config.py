@@ -1,10 +1,12 @@
 import os
 from dotenv import load_dotenv
+import psycopg2
 
 load_dotenv()
 
 class Config:
     def __init__(self) -> None:
+        # news API configuration
         self.newsapi_key = os.getenv("NEWSAPI_KEY")
         self.newsapi_query = os.getenv("NEWSAPI_QUERY")
         self.aws_region = os.getenv("AWS_REGION")
@@ -14,6 +16,9 @@ class Config:
             "NEWSAPI_BASE_URL",
             "https://newsapi.org/v2/everything"
         )
+
+        # Supabase configuration
+        self.database_url = os.getenv("DATABASE_URL")
 
         self._validate()
 
@@ -28,6 +33,11 @@ class Config:
             missing.append("AWS_REGION")
         if not self.kinesis_stream_name:
             missing.append("KINESIS_STREAM_NAME")
+        if not self.database_url:
+            missing.append("DATABASE_URL")
 
         if missing:
             raise ValueError(f"Missing required environment variables: {', '.join(missing)}")
+
+    def get_supabase_connection(self) -> psycopg2.extensions.connection:
+        return psycopg2.connect(self.database_url)
