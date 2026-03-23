@@ -1,5 +1,8 @@
+import os
+import pytest
 from news_ingest_pipeline.config import Config
 
+@pytest.mark.skipif(os.getenv("CI") == "true", reason="Skipped in CI")
 def test_supabase_connection():
     config = Config()
     conn = config.get_supabase_connection()

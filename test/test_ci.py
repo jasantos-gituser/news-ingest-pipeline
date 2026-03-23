@@ -80,6 +80,7 @@ def test_config_raises_when_required_env_missing(monkeypatch):
     monkeypatch.delenv("NEWSAPI_QUERY", raising=False)
     monkeypatch.delenv("AWS_REGION", raising=False)
     monkeypatch.delenv("KINESIS_STREAM_NAME", raising=False)
+    monkeypatch.delenv("DATABASE_URL", raising=False)
     # raising=False means:
     # - If the variable does not exist, do not throw an error.
 
@@ -95,6 +96,7 @@ def test_config_raises_when_required_env_missing(monkeypatch):
     assert "NEWSAPI_QUERY" in msg
     assert "AWS_REGION" in msg
     assert "KINESIS_STREAM_NAME" in msg
+    assert "DATABASE_URL" in msg
 
 
 def test_config_ok_when_required_env_present(monkeypatch):
@@ -102,6 +104,7 @@ def test_config_ok_when_required_env_present(monkeypatch):
     monkeypatch.setenv("NEWSAPI_QUERY", "bitcoin")
     monkeypatch.setenv("AWS_REGION", "ap-southeast-1")
     monkeypatch.setenv("KINESIS_STREAM_NAME", "dummy-stream")
+    monkeypatch.setenv("DATABASE_URL", "postgresql://dummy")
 
     c = Config()
     assert c.newsapi_key == "dummy"
