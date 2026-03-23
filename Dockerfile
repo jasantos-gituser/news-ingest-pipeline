@@ -24,6 +24,7 @@ COPY src ./src
 
 # Test stage (used by CI)
 FROM base AS test
+ENV CI=true
 RUN pip install --no-cache-dir pytest
 COPY test ./test
 CMD ["pytest", "-q"]
