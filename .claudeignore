@@ -1,0 +1,18 @@
+# Claude Code — files excluded from codebase indexing
+
+# Secrets
+.env
+
+# Dev scratch notes (may contain credentials)
+test - g/
+
+# Virtualenv
+venv/
+
+# Build artifacts
+*.tar
+*.docx
+*.ipynb
+__pycache__/
+*.pyc
+.DS_Store

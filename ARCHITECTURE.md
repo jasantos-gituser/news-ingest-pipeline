@@ -12,24 +12,33 @@ including why specific tools and patterns were chosen over alternatives.
 
 ## Pipeline Architecture
 ```
-NewsAPI (External Source)
-    ↓
-Fetcher — newsapi_client.py
-    ↓
-Transformer — transformer.py
-    ↓
-Pydantic Validation — models.py
-    ↓
-FastAPI Layer — api.py (/ingest endpoint)
-    ↓
-    ├── PostgreSQL — db_writer.py (persistent storage)
-    └── Upstash Kafka — kafka_writer.py (event streaming)
-                            ↓
-                    Downstream consumers
-                    (analytics, enrichment, etc.)
+APScheduler (scheduler.py)          Manual Trigger (HTTP /ingest)
+         |                                    |
+         +-------------------+----------------+
+                             |
+                          NewsAPI
+                       External Source
+                             |
+                          Fetcher
+                       newsapi_client.py
+                             |
+                        Transformer
+                         models.py
+                             |
+                        FastAPI Layer
+                      api.py (/ingest)
+                             |
+             +---------------+---------------+
+             |               |               |
+          Supabase     Upstash Kafka       Email
+        PostgreSQL      kafka_writer      Notification
+        db_writer.py    (streaming)    (scheduled runs)
+        (storage)
 ```
 
 Scheduling via APScheduler triggers the pipeline automatically.
+After each scheduled run, an email notification is sent to the
+configured recipient via SMTP using Python's built-in smtplib.
 Prometheus exposes metrics for observability.
 Docker packages the service. Render handles cloud deployment.
 GitHub Actions runs CI on every push.
@@ -150,6 +159,11 @@ message broker dependency (Redis or RabbitMQ) that is unnecessary
 for a single scheduled job.
 
 APScheduler is the simplest correct solution for this use case.
+After each scheduled run completes, the scheduler sends an email
+notification to the configured recipient via smtplib (Python
+standard library). This requires no third-party service — any
+SMTP provider (Gmail, Outlook, etc.) works with the appropriate
+credentials set in environment variables.
 
 ### Trade-off
 If the pipeline scaled to many scheduled jobs with complex
@@ -208,6 +222,35 @@ maintainable at scale.
 
 ---
 
+## Decision 7 — smtplib over third-party email services
+
+### Options considered
+- smtplib (Python standard library)
+- SendGrid
+- Mailgun
+- AWS SES
+
+### Decision
+smtplib
+
+### Reasoning
+smtplib is part of the Python standard library — no additional
+dependency, no account registration, and no usage limits for a
+low-volume scheduled pipeline. Any SMTP provider works: Gmail,
+Outlook, or a self-hosted mail server.
+
+SendGrid, Mailgun, and AWS SES are production-grade services
+better suited to high-volume transactional email. For a single
+notification per scheduled run, the overhead is not justified.
+
+### Trade-off
+smtplib requires valid SMTP credentials and may be subject to
+provider-specific limits (e.g., Gmail's 500 emails per day).
+For a scheduled pipeline running a few times per day, this is
+not a constraint.
+
+---
+
 ## Monitoring and Observability
 
 Prometheus metrics are exposed via a /metrics endpoint.
@@ -236,6 +279,7 @@ would feed into Grafana dashboards or CloudWatch.
 | Persistent storage | PostgreSQL with indexes |
 | REST API layer | FastAPI + Swagger docs |
 | Scheduling | APScheduler |
+| Email notification | smtplib via SMTP on scheduled runs |
 | Containerization | Docker + Docker Compose |
 | CI pipeline | GitHub Actions + pytest |
 | CD pipeline | Render auto-deploy from GitHub |
