@@ -74,13 +74,13 @@ def test_config_raises_when_required_env_missing(monkeypatch):
     # - It lets you temporarily modify environment variables during a test.
     # - Changes are isolated to this test only.
 
-    # Clear required env vars
-    # This removes those variables from os.environ.
+    # Clear all required env vars
     monkeypatch.delenv("NEWSAPI_KEY", raising=False)
     monkeypatch.delenv("NEWSAPI_QUERY", raising=False)
-    monkeypatch.delenv("AWS_REGION", raising=False)
-    monkeypatch.delenv("KINESIS_STREAM_NAME", raising=False)
     monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.delenv("SMTP_USER", raising=False)
+    monkeypatch.delenv("SMTP_PASSWORD", raising=False)
+    monkeypatch.delenv("NOTIFY_EMAIL", raising=False)
     # raising=False means:
     # - If the variable does not exist, do not throw an error.
 
@@ -90,25 +90,61 @@ def test_config_raises_when_required_env_missing(monkeypatch):
 
     msg = str(e.value)
     # This extracts the error message string.
-    # Then you assert:
     assert "Missing required environment variables" in msg
     assert "NEWSAPI_KEY" in msg
     assert "NEWSAPI_QUERY" in msg
-    assert "AWS_REGION" in msg
-    assert "KINESIS_STREAM_NAME" in msg
     assert "DATABASE_URL" in msg
+    assert "SMTP_USER" in msg
+    assert "SMTP_PASSWORD" in msg
+    assert "NOTIFY_EMAIL" in msg
 
 
 def test_config_ok_when_required_env_present(monkeypatch):
     monkeypatch.setenv("NEWSAPI_KEY", "dummy")
     monkeypatch.setenv("NEWSAPI_QUERY", "bitcoin")
-    monkeypatch.setenv("AWS_REGION", "ap-southeast-1")
-    monkeypatch.setenv("KINESIS_STREAM_NAME", "dummy-stream")
     monkeypatch.setenv("DATABASE_URL", "postgresql://dummy")
+    monkeypatch.setenv("SMTP_USER", "sender@gmail.com")
+    monkeypatch.setenv("SMTP_PASSWORD", "dummy_app_password")
+    monkeypatch.setenv("NOTIFY_EMAIL", "recipient@gmail.com")
 
     c = Config()
     assert c.newsapi_key == "dummy"
     assert c.newsapi_query == "bitcoin"
-    assert c.aws_region == "ap-southeast-1"
-    assert c.kinesis_stream_name == "dummy-stream"
     assert c.newsapi_base_url == "https://newsapi.org/v2/everything"
+    assert c.smtp_user == "sender@gmail.com"
+    assert c.notify_email == "recipient@gmail.com"
+    assert c.schedule_frequency == "daily"
+    assert c.schedule_time == "13:00"
+    assert c.schedule_timezone == "Asia/Manila"
+
+
+def test_config_raises_when_weekly_missing_day(monkeypatch):
+    monkeypatch.setenv("NEWSAPI_KEY", "dummy")
+    monkeypatch.setenv("NEWSAPI_QUERY", "bitcoin")
+    monkeypatch.setenv("DATABASE_URL", "postgresql://dummy")
+    monkeypatch.setenv("SMTP_USER", "sender@gmail.com")
+    monkeypatch.setenv("SMTP_PASSWORD", "dummy_app_password")
+    monkeypatch.setenv("NOTIFY_EMAIL", "recipient@gmail.com")
+    monkeypatch.setenv("SCHEDULE_FREQUENCY", "weekly")
+    monkeypatch.delenv("SCHEDULE_DAY_OF_WEEK", raising=False)
+
+    with pytest.raises(ValueError) as e:
+        Config()
+
+    assert "SCHEDULE_DAY_OF_WEEK" in str(e.value)
+
+
+def test_config_raises_when_monthly_missing_day(monkeypatch):
+    monkeypatch.setenv("NEWSAPI_KEY", "dummy")
+    monkeypatch.setenv("NEWSAPI_QUERY", "bitcoin")
+    monkeypatch.setenv("DATABASE_URL", "postgresql://dummy")
+    monkeypatch.setenv("SMTP_USER", "sender@gmail.com")
+    monkeypatch.setenv("SMTP_PASSWORD", "dummy_app_password")
+    monkeypatch.setenv("NOTIFY_EMAIL", "recipient@gmail.com")
+    monkeypatch.setenv("SCHEDULE_FREQUENCY", "monthly")
+    monkeypatch.delenv("SCHEDULE_DAY_OF_MONTH", raising=False)
+
+    with pytest.raises(ValueError) as e:
+        Config()
+
+    assert "SCHEDULE_DAY_OF_MONTH" in str(e.value)

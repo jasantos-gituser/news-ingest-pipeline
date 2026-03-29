@@ -1,7 +1,7 @@
 # This workflow will install Python dependencies, run tests and lint with a single version of Python
 # For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
 
-name: Python application
+name: Python application v1
 
 on:
   push:
@@ -38,5 +38,47 @@ jobs:
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
       - name: Test with pytest
+        env:
+          NEWSAPI_KEY: dummy
+          NEWSAPI_QUERY: bitcoin
+          DATABASE_URL: postgresql://dummy
+          SMTP_USER: sender@gmail.com
+          SMTP_PASSWORD: dummy_app_password
+          NOTIFY_EMAIL: recipient@gmail.com
+          SCHEDULE_FREQUENCY: daily
+          SCHEDULE_TIME: "13:00"
+          SCHEDULE_TIMEZONE: Asia/Manila
         run: |
-          PYTHONPATH=src pytest -v -s
+          PYTHONPATH=src pytest -q
+
+      - name: Build Docker test image
+        run: |
+          docker build --target test -t news-ingest-pipeline:test .
+
+      - name: Run pytest inside Docker
+        run: |
+          docker run --rm \
+            -e NEWSAPI_KEY=dummy \
+            -e NEWSAPI_QUERY=bitcoin \
+            -e DATABASE_URL=postgresql://dummy \
+            -e SMTP_USER=sender@gmail.com \
+            -e SMTP_PASSWORD=dummy_app_password \
+            -e NOTIFY_EMAIL=recipient@gmail.com \
+            -e SCHEDULE_FREQUENCY=daily \
+            -e SCHEDULE_TIME=13:00 \
+            -e SCHEDULE_TIMEZONE=Asia/Manila \
+            news-ingest-pipeline:test
+
+      - name: Build Docker runtime image
+        run: |
+          docker build --target runtime -t news-ingest-pipeline:runtime .
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Trigger Render deploy
+        run: |
+          curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
