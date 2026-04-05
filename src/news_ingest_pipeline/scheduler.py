@@ -1,3 +1,4 @@
+import logging
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
@@ -6,28 +7,36 @@ from news_ingest_pipeline.config import Config
 from news_ingest_pipeline.models import Article
 from news_ingest_pipeline.newsapi_client import fetch_articles
 
+logger = logging.getLogger(__name__)
+
 
 def run_scheduled_ingest() -> None:
-    config = Config()
-
-    raw_articles = fetch_articles(config)
-    fetched_count = len(raw_articles)
-    processed_count = 0
-    failed_count = 0
-
-    conn = config.get_supabase_connection()
+    logger.info("Scheduled ingest started")
     try:
-        for raw in raw_articles:
-            try:
-                article = Article.from_newsapi(raw)
-                db_writer.insert_article(conn, article)
-                processed_count += 1
-            except Exception:
-                failed_count += 1
-    finally:
-        conn.close()
+        config = Config()
 
-    notifier.send_ingest_notification(config, fetched_count, processed_count, failed_count)
+        raw_articles = fetch_articles(config)
+        fetched_count = len(raw_articles)
+        processed_count = 0
+        failed_count = 0
+
+        conn = config.get_supabase_connection()
+        try:
+            for raw in raw_articles:
+                try:
+                    article = Article.from_newsapi(raw)
+                    db_writer.insert_article(conn, article)
+                    processed_count += 1
+                except Exception as e:
+                    logger.error("Failed to process article: %s", e)
+                    failed_count += 1
+        finally:
+            conn.close()
+
+        notifier.send_ingest_notification(config, fetched_count, processed_count, failed_count)
+        logger.info("Scheduled ingest complete: fetched=%d processed=%d failed=%d", fetched_count, processed_count, failed_count)
+    except Exception as e:
+        logger.exception("Scheduled ingest failed: %s", e)
 
 
 def build_scheduler(config: Config) -> AsyncIOScheduler:

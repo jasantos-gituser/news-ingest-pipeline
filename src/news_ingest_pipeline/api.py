@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 from datetime import date
 from typing import Optional
@@ -9,6 +10,9 @@ from news_ingest_pipeline.config import Config
 from news_ingest_pipeline.models import Article
 from news_ingest_pipeline.newsapi_client import fetch_articles
 from news_ingest_pipeline.scheduler import build_scheduler
+
+logging.basicConfig(level=logging.INFO)
+logging.getLogger("apscheduler").setLevel(logging.DEBUG)
 
 
 @asynccontextmanager
@@ -35,7 +39,7 @@ def ingest():
     except ValueError as exc:
         raise HTTPException(status_code=500, detail=str(exc))
 
-    raw_articles = fetch_articles(config)
+    raw_articles = fetch_articles(config) 
     fetched_count = len(raw_articles)
     processed_count = 0
     failed_count = 0
